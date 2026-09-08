@@ -4,6 +4,8 @@
 # ============================================================
 import json
 import os
+import tkinter as tk
+from tkinter import messagebox, ttk
 
 RUTA_JSON = os.path.join(os.path.dirname(__file__), "servidor_estado.json")
 
@@ -60,14 +62,125 @@ def diagnosticar_servidor(hechos):
     return diagnosticos
 
 
+class VentanaDiagnostico:
+    def __init__(self, raiz):
+        self.raiz = raiz
+        self.raiz.title("Diagnostico de servidor")
+        self.raiz.geometry("720x610")
+        self.raiz.minsize(620, 520)
+        self.raiz.configure(bg="#eef3f7")
+
+        hechos = cargar_hechos()
+        self.cpu_uso = tk.DoubleVar(value=hechos["cpu_uso"])
+        self.memoria_libre = tk.DoubleVar(value=hechos["memoria_libre"])
+        self.ping_respuesta = tk.DoubleVar(value=hechos["ping_respuesta"])
+        self.temperatura = tk.DoubleVar(value=hechos["temperatura"])
+        self.ventilador_encendido = tk.BooleanVar(
+            value=hechos["ventilador_encendido"]
+        )
+
+        estilo = ttk.Style()
+        estilo.theme_use("clam")
+        estilo.configure("Titulo.TLabel", font=("Segoe UI", 22, "bold"),
+                         foreground="#17324d", background="#eef3f7")
+        estilo.configure("Subtitulo.TLabel", font=("Segoe UI", 10),
+                         foreground="#526475", background="#eef3f7")
+        estilo.configure("Panel.TLabelframe", background="#ffffff")
+        estilo.configure("Panel.TLabelframe.Label", font=("Segoe UI", 11, "bold"),
+                         foreground="#17324d", background="#ffffff")
+
+        contenedor = tk.Frame(raiz, bg="#eef3f7", padx=28, pady=22)
+        contenedor.pack(fill="both", expand=True)
+        ttk.Label(contenedor, text="Diagnostico de servidor",
+                  style="Titulo.TLabel").pack(anchor="w")
+        ttk.Label(
+            contenedor,
+            text="Modifica los parametros y ejecuta el motor de reglas para evaluar el estado.",
+            style="Subtitulo.TLabel",
+        ).pack(anchor="w", pady=(2, 18))
+
+        panel = ttk.LabelFrame(contenedor, text="Parametros del servidor",
+                               style="Panel.TLabelframe", padding=18)
+        panel.pack(fill="x")
+        self._crear_control(panel, "Uso de CPU", self.cpu_uso, 0, 100, "%")
+        self._crear_control(panel, "Memoria libre", self.memoria_libre, 0, 100, "%")
+        self._crear_control(panel, "Respuesta de ping", self.ping_respuesta, 0, 1000, " ms")
+        self._crear_control(panel, "Temperatura", self.temperatura, 0, 120, " C")
+
+        ttk.Checkbutton(
+            panel,
+            text="Ventilador encendido",
+            variable=self.ventilador_encendido,
+            command=self.evaluar,
+        ).pack(anchor="w", pady=(10, 0))
+
+        acciones = tk.Frame(contenedor, bg="#eef3f7")
+        acciones.pack(fill="x", pady=16)
+        ttk.Button(acciones, text="Evaluar estado", command=self.evaluar).pack(
+            side="left"
+        )
+        ttk.Button(acciones, text="Guardar parametros", command=self.guardar).pack(
+            side="left", padx=10
+        )
+
+        resultado = ttk.LabelFrame(contenedor, text="Alertas del sistema",
+                                   style="Panel.TLabelframe", padding=14)
+        resultado.pack(fill="both", expand=True)
+        self.alertas = tk.Text(
+            resultado, height=7, wrap="word", state="disabled",
+            font=("Segoe UI", 11), relief="flat", padx=10, pady=8,
+        )
+        self.alertas.pack(fill="both", expand=True)
+        self.alertas.tag_configure("normal", foreground="#177245")
+        self.alertas.tag_configure("advertencia", foreground="#a35b00")
+        self.alertas.tag_configure("critico", foreground="#b42318")
+        self.evaluar()
+
+    def _crear_control(self, padre, texto, variable, minimo, maximo, unidad):
+        fila = tk.Frame(padre, bg="#ffffff")
+        fila.pack(fill="x", pady=5)
+        ttk.Label(fila, text=texto, width=22, background="#ffffff").pack(side="left")
+        valor = ttk.Label(fila, width=10, anchor="e", background="#ffffff")
+        valor.pack(side="right")
+        ttk.Scale(
+            fila, from_=minimo, to=maximo, variable=variable,
+            command=lambda _: self._actualizar_valor(valor, variable, unidad),
+        ).pack(side="left", fill="x", expand=True, padx=12)
+        self._actualizar_valor(valor, variable, unidad)
+
+    def _actualizar_valor(self, etiqueta, variable, unidad):
+        etiqueta.configure(text=f"{variable.get():.0f}{unidad}")
+        if hasattr(self, "alertas"):
+            self.evaluar()
+
+    def _hechos_actuales(self):
+        return {
+            "cpu_uso": round(self.cpu_uso.get()),
+            "memoria_libre": round(self.memoria_libre.get()),
+            "ping_respuesta": round(self.ping_respuesta.get()),
+            "temperatura": round(self.temperatura.get()),
+            "ventilador_encendido": self.ventilador_encendido.get(),
+        }
+
+    def evaluar(self):
+        diagnosticos = diagnosticar_servidor(self._hechos_actuales())
+        self.alertas.configure(state="normal")
+        self.alertas.delete("1.0", "end")
+        for diagnostico in diagnosticos:
+            nivel = "critico" if diagnostico.startswith("CRITICO") else "advertencia"
+            if diagnostico.startswith("NORMAL"):
+                nivel = "normal"
+            self.alertas.insert("end", f"- {diagnostico}\n\n", nivel)
+        self.alertas.configure(state="disabled")
+
+    def guardar(self):
+        with open(RUTA_JSON, "w", encoding="utf-8") as archivo:
+            json.dump(self._hechos_actuales(), archivo, indent=4)
+        messagebox.showinfo("Guardado", "Los parametros se guardaron correctamente.")
+
+
 # 3. EJECUCIÓN
 if __name__ == "__main__":
-    hechos = cargar_hechos()
-
-    print("=== Hechos cargados desde servidor_estado.json ===")
-    for clave, valor in hechos.items():
-        print(f"  {clave}: {valor}")
-
-    print("\n=== Diagnóstico ===")
-    for linea in diagnosticar_servidor(hechos):
-        print("-", linea)
+    raiz = tk.Tk()
+    VentanaDiagnostico(raiz)
+    raiz.mainloop()
