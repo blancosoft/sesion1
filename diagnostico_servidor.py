@@ -64,6 +64,7 @@ def diagnosticar_servidor(hechos):
 
 class VentanaDiagnostico:
     def __init__(self, raiz):
+        # La ventana mantiene los valores editables que alimentan el motor de reglas.
         self.raiz = raiz
         self.raiz.title("Diagnostico de servidor")
         self.raiz.geometry("720x610")
@@ -79,6 +80,7 @@ class VentanaDiagnostico:
             value=hechos["ventilador_encendido"]
         )
 
+        # Se configura un estilo sencillo para separar parametros, acciones y alertas.
         estilo = ttk.Style()
         estilo.theme_use("clam")
         estilo.configure("Titulo.TLabel", font=("Segoe UI", 22, "bold"),
@@ -99,6 +101,7 @@ class VentanaDiagnostico:
             style="Subtitulo.TLabel",
         ).pack(anchor="w", pady=(2, 18))
 
+        # Cada barra representa un hecho que el usuario puede modificar.
         panel = ttk.LabelFrame(contenedor, text="Parametros del servidor",
                                style="Panel.TLabelframe", padding=18)
         panel.pack(fill="x")
@@ -123,6 +126,7 @@ class VentanaDiagnostico:
             side="left", padx=10
         )
 
+        # El resultado se muestra como texto coloreado segun la severidad.
         resultado = ttk.LabelFrame(contenedor, text="Alertas del sistema",
                                    style="Panel.TLabelframe", padding=14)
         resultado.pack(fill="both", expand=True)
@@ -137,6 +141,7 @@ class VentanaDiagnostico:
         self.evaluar()
 
     def _crear_control(self, padre, texto, variable, minimo, maximo, unidad):
+        # Crea una barra reutilizable con su etiqueta y valor numerico actual.
         fila = tk.Frame(padre, bg="#ffffff")
         fila.pack(fill="x", pady=5)
         ttk.Label(fila, text=texto, width=22, background="#ffffff").pack(side="left")
@@ -154,6 +159,7 @@ class VentanaDiagnostico:
             self.evaluar()
 
     def _hechos_actuales(self):
+        # Convierte los valores visuales en el diccionario esperado por las reglas.
         return {
             "cpu_uso": round(self.cpu_uso.get()),
             "memoria_libre": round(self.memoria_libre.get()),
@@ -163,6 +169,7 @@ class VentanaDiagnostico:
         }
 
     def evaluar(self):
+        # Ejecuta el motor y reemplaza las alertas mostradas en la ventana.
         diagnosticos = diagnosticar_servidor(self._hechos_actuales())
         self.alertas.configure(state="normal")
         self.alertas.delete("1.0", "end")
@@ -174,6 +181,7 @@ class VentanaDiagnostico:
         self.alertas.configure(state="disabled")
 
     def guardar(self):
+        # Persiste los valores modificados para reutilizarlos en la proxima ejecucion.
         with open(RUTA_JSON, "w", encoding="utf-8") as archivo:
             json.dump(self._hechos_actuales(), archivo, indent=4)
         messagebox.showinfo("Guardado", "Los parametros se guardaron correctamente.")
