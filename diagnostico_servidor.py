@@ -105,7 +105,7 @@ class VentanaDiagnostico:
         self._crear_control(panel, "Uso de CPU", self.cpu_uso, 0, 100, "%")
         self._crear_control(panel, "Memoria libre", self.memoria_libre, 0, 100, "%")
         self._crear_control(panel, "Respuesta de ping", self.ping_respuesta, 0, 1000, " ms")
-        self._crear_control(panel, "Temperatura", self.temperatura, 0, 120, " C")
+        self._crear_control(panel, "Temperatura", self.temperatura, 0, 600, " C")
 
         ttk.Checkbutton(
             panel,
