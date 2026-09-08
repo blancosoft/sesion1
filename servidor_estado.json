@@ -1,7 +1,7 @@
 {
-    "cpu_uso": 45,
-    "memoria_libre": 60,
-    "ping_respuesta": 25,
-    "temperatura": 505,
+    "cpu_uso": 100,
+    "memoria_libre": 100,
+    "ping_respuesta": 424,
+    "temperatura": 72,
     "ventilador_encendido": false
 }
